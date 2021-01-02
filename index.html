@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <title>MilkTalk</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</head>
+
+<body>
+    <p id="content"></p>
+
+    <!-- The core Firebase JS SDK is always required and must be listed first -->
+    <script src="https://www.gstatic.com/firebasejs/8.2.1/firebase-app.js"></script>
+
+    <!-- If you enabled Analytics in your project, add the Firebase SDK for Analytics -->
+    <script src="https://www.gstatic.com/firebasejs/8.2.1/firebase-analytics.js"></script>
+
+    <!-- Add Firebase products that you want to use -->
+    <script src="https://www.gstatic.com/firebasejs/8.2.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.2.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/ui/4.6.1/firebase-ui-auth.js"></script>
+    <link type="text/css" rel="stylesheet" href="https://www.gstatic.com/firebasejs/ui/4.6.1/firebase-ui-auth.css" />
+
+    <script>
+        function loadPairUp() {
+            $("#content").html("");
+            var currentUser = firebase.auth().currentUser;
+            $("#content").append("Logged in as "+currentUser.displayName+" / "+currentUser.email+" .<br>");
+            $("#content").append("<button class='btn btn-primary'>Pair Up</button><br>");
+            $("#content").append("<button class='btn btn-primary' onclick='signOutUser()'>Sign Out</button><br>");
+        }
+
+        function signOutUser(){
+            $("#content").html("");
+            firebase.auth().signOut();
+        }
+        
+        function init() {
+            // Your web app's Firebase configuration
+            var firebaseConfig = {
+                apiKey: "AIzaSyDZJF57xMph7ze-oj6H-TyJL5X87RqNaHQ",
+                authDomain: "milktalk-dev.firebaseapp.com",
+                databaseURL: "https://milktalk-dev.firebaseio.com",
+                projectId: "milktalk-dev",
+                storageBucket: "milktalk-dev.appspot.com",
+                messagingSenderId: "900707653646",
+                appId: "1:900707653646:web:7e88007acdfbbfcd13045f"
+            };
+            // Initialize Firebase
+            firebase.initializeApp(firebaseConfig);
+            var ui = new firebaseui.auth.AuthUI(firebase.auth());
+            firebase.auth().onAuthStateChanged((user) => {
+                if (user) {
+                    loadPairUp();
+                } else {
+                    ui.start('#content', {
+                        callbacks: {
+                            signInSuccessWithAuthResult: function (authResult, redirectUrl) {
+                                // User successfully signed in.
+                                // Return type determines whether we continue the redirect automatically
+                                // or whether we leave that to developer to handle.
+                                return false;
+                            }
+                        },
+                        signInOptions: [
+                            {
+                                provider: firebase.auth.EmailAuthProvider.PROVIDER_ID,
+                                requireDisplayName: false
+                            }
+                        ]
+                    });
+                    delete ui;
+                }
+            });
+        }
+        document.onload = init();
+    </script>
+</body>
