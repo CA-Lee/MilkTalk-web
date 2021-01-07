@@ -22,24 +22,75 @@
 
     <!-- Add Firebase products that you want to use -->
     <script src="https://www.gstatic.com/firebasejs/8.2.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.2.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.2.1/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/ui/4.6.1/firebase-ui-auth.js"></script>
     <link type="text/css" rel="stylesheet" href="https://www.gstatic.com/firebasejs/ui/4.6.1/firebase-ui-auth.css" />
 
     <script>
-        function loadPairUp() {
-            $("#content").html("");
+        const api_url_root = "https://4df927c7463e.ngrok.io/api";
+        const content = "#content";
+        function afterSignIn() {
+            $(content).html("");
             var currentUser = firebase.auth().currentUser;
-            $("#content").append("Logged in as "+currentUser.displayName+" / "+currentUser.email+" .<br>");
-            $("#content").append("<button class='btn btn-primary'>Pair Up</button><br>");
-            $("#content").append("<button class='btn btn-primary' onclick='signOutUser()'>Sign Out</button><br>");
+            $(content).append("Logged in as " + currentUser.displayName + " / " + currentUser.email + " .<br>");
+            $(content).append("<button class='btn btn-primary' onclick='pairUp()'>Pair Up</button><br>");
+            $(content).append("<button class='btn btn-primary' onclick='signOutUser()'>Sign Out</button><br>");
         }
 
-        function signOutUser(){
-            $("#content").html("");
+        function pairUp() {
+            $(content).html("");
+            $(content).append("<button class='btn btn-primary' onclick='signOutUser()'>Sign Out</button><br>");
+            firebase.auth().currentUser.getIdToken(forceRefresh = true).then((idToken) => {
+                $.get(api_url_root + "/pair", data = { id_token: idToken }, (roomId) => {
+                    var db = firebase.database();
+                    db.goOnline();
+                    var room = db.ref("chat_room/" + roomId);
+
+                    // TODO: check if room is locked
+
+                    var chatLog = room.child("chat_log");
+                    var chatLogHtml = $("<div></div>");
+                    chatLogHtml.attr("id", "chatLog");
+                    $(content).append(chatLogHtml);
+                    // chatLog.get().then((chatLogSnapshot) => {
+                    //     console.log(chatLogSnapshot.toJSON());
+                    //     // $(content).append(JSON.stringify(chat_log_snapshot.toJSON()));
+                    //     chatLogSnapshot.forEach((blob) => {
+                    //     });
+
+                    //     chatLogSnapshot.ref.push({
+                    //         sender: {
+                    //             name: "system"
+                    //         },
+                    //         time: Math.round(Date.now() / (1000 * 60)),
+                    //         type: "text",
+                    //         value: firebase.auth().currentUser.email
+                    //     });
+                    // });
+                    chatLog.on("child_added", (blob) => {
+                        console.log("child_added");
+                        var blobHtml = $("<div></div>");
+                        blobHtml.attr("id", blob.key);
+                        var message = blob.val()
+                        if (message.type === "text") {
+                            blobHtml.text(message.time + " <" + message.sender.name + ">: " + message.value);
+                        } else {
+                            blobHtml.text(message.time + " <" + message.sender.name + ">: (Unsupported message)");
+                        }
+                        $("#chatLog").append(blobHtml);
+                    });
+                    chatLog.on("value", (child) => {
+                        console.log("value");
+                    });
+                });
+            });
+        }
+
+        function signOutUser() {
+            $(content).html("");
             firebase.auth().signOut();
         }
-        
+
         function init() {
             // Your web app's Firebase configuration
             var firebaseConfig = {
@@ -56,7 +107,7 @@
             var ui = new firebaseui.auth.AuthUI(firebase.auth());
             firebase.auth().onAuthStateChanged((user) => {
                 if (user) {
-                    loadPairUp();
+                    afterSignIn();
                 } else {
                     ui.start('#content', {
                         callbacks: {
